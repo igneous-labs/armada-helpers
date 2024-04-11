@@ -21,9 +21,21 @@ pub async fn get_clmm_vault(client: Arc<RpcClient>, clmm_address: Pubkey) -> Clp
     AccountDeserialize::try_deserialize(&mut data).expect("deserialized properly")
 }
 
-pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) {
-    let total_a = 0_u64;
-    let total_b = 0_u64;
+#[derive(Debug)]
+pub struct ClmmBalances {
+  /// The SPL Token Mint address of token A
+  pub token_a: Pubkey,
+  /// The SPL Token Mint address of token B
+  pub token_b: Pubkey,
+  /// The total amount of token A under management by the vault
+  pub total_a: u64,
+  /// The total amount of token B under management by the vault
+  pub total_b: u64,
+}
+
+pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -> ClmmBalances {
+    let mut total_a = 0_u64;
+    let mut total_b = 0_u64;
     let keys = [
         clmm.clp,
         clmm.token_vault_a,
@@ -35,6 +47,7 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) {
         clmm.positions[4].position_key,
     ];
     let mut positions: [Option<Position>; MAX_POSITIONS] = [None, None, None, None, None];
+    let mut clp: Option<Whirlpool> = None;
     // Load the CLMM Vault's token accounts and whirlpool
     let res = client
         .get_multiple_accounts(&keys)
@@ -43,37 +56,51 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) {
     for (index, acct) in res.iter().enumerate() {
         if index == 0 {
             let mut data: &[u8] = &acct.as_ref().expect("Whirlpool exists").data;
-            let clp: crate::whirlpool::Whirlpool = AccountDeserialize::try_deserialize(&mut data)
-                .expect("Whirlpool deserialized properly");
-            println!("CLP {}", clp.token_mint_a);
+            clp = Some(
+                AccountDeserialize::try_deserialize(&mut data)
+                    .expect("Whirlpool deserialized properly"),
+            );
         } else if index == 1 {
             let mut data: &[u8] = &acct.as_ref().expect("Token vault a exists").data;
             let token_vault_a: TokenAccount = AccountDeserialize::try_deserialize(&mut data)
                 .expect("Token vault a deserialized properly");
-            println!("Token Vault A: {}", token_vault_a.amount);
+            total_a += token_vault_a.amount;
         } else if index == 2 {
             let mut data: &[u8] = &acct.as_ref().expect("Token vault b exists").data;
-            let token_vault_a: TokenAccount = AccountDeserialize::try_deserialize(&mut data)
+            let token_vault_b: TokenAccount = AccountDeserialize::try_deserialize(&mut data)
                 .expect("Token vault a deserialized properly");
-            println!("Token Vault B: {}", token_vault_a.amount);
+            total_b += token_vault_b.amount;
         } else if index > 2 && index < 3 + MAX_POSITIONS {
-          let position_index = index - 3;
-          let position_key = clmm.positions[position_index].position_key;
-          println!("position_key {}", position_key);
-          if position_key == Pubkey::default() {
-            continue;
-          }
-          let mut data: &[u8] = &acct.as_ref().expect(&format!("Position at idx {} exists", position_index)).data;
-          let position: Position = AccountDeserialize::try_deserialize(&mut data).expect(
-            &format!("Position at idx {} didn't deserialized properly", position_index)
-          );
-          println!("Position liquidity {}", position.liquidity);
-          positions[position_index] = Some(position);
+            let position_index = index - 3;
+            let position_key = clmm.positions[position_index].position_key;
+            if position_key == Pubkey::default() {
+                continue;
+            }
+            let mut data: &[u8] = &acct
+                .as_ref()
+                .expect(&format!("Position at idx {} exists", position_index))
+                .data;
+            let position: Position =
+                AccountDeserialize::try_deserialize(&mut data).expect(&format!(
+                    "Position at idx {} didn't deserialized properly",
+                    position_index
+                ));
+            positions[position_index] = Some(position);
         }
     }
-
-    // TODO: Deserialize the token vaults and whirlpool.
     // TODO: Calculate the tokenA and tokenB value of the positions
+    let (positions_a, positions_b) = total_tokens_on_positions(&clp.unwrap(), clmm, &positions)
+            .expect("Position balances calculated");
+    println!("Position balances {:?}", (positions_a, positions_b));
+
+    total_a += positions_a;
+    total_b += positions_b;
+    ClmmBalances {
+      token_a: clmm.token_mint_a,
+      token_b: clmm.token_mint_b,
+      total_a,
+      total_b
+    }
 }
 
 pub fn total_tokens_on_positions<'info>(
