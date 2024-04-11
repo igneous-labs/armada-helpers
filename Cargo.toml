@@ -18,3 +18,4 @@ solana-sdk = "^1.16"
 tokio = {version = "1", features = ["full"] }
 
 clmm-bindings = { path = "../psylbc/programs/clmm-bindings" }
+whirlpool = { git = "https://github.com/orca-so/whirlpools", rev = "f54632f", features = ["no-entrypoint"] }
