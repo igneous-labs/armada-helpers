@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use anchor_lang::prelude::*;
-use anchor_spl::token::{TokenAccount, Mint};
+use anchor_spl::token::{Mint, TokenAccount};
 use clmm_bindings::{ClpVault, MAX_POSITIONS};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::pubkey::Pubkey;
@@ -10,10 +8,10 @@ use crate::whirlpool::{
     get_liquidity_from_position, get_token_a_b_reward_indexes, Position, Whirlpool,
 };
 
-pub async fn get_clmm_vault(client: Arc<RpcClient>, clmm_address: Pubkey) -> ClpVault {
+pub async fn get_clmm_vault(client: &RpcClient, clmm_address: &Pubkey) -> ClpVault {
     // Load the account
     let clmm_vault_acct = client
-        .get_account(&clmm_address)
+        .get_account(clmm_address)
         .await
         .expect("CLMM Vault did not exist");
     // Deserialize the account data
@@ -23,21 +21,21 @@ pub async fn get_clmm_vault(client: Arc<RpcClient>, clmm_address: Pubkey) -> Clp
 
 #[derive(Debug)]
 pub struct ClmmBalances {
-  /// The SPL Token Mint address of token A
-  pub token_a: Pubkey,
-  /// The SPL Token Mint address of token B
-  pub token_b: Pubkey,
-  /// The total amount of token A under management by the vault
-  pub total_a: u64,
-  /// The total amount of token B under management by the vault
-  pub total_b: u64,
-  /// The mint address for the LP token
-  pub lp_mint: Pubkey,
-  /// The total supply of the LP mint for the vault
-  pub lp_supply: u64,
+    /// The SPL Token Mint address of token A
+    pub token_a: Pubkey,
+    /// The SPL Token Mint address of token B
+    pub token_b: Pubkey,
+    /// The total amount of token A under management by the vault
+    pub total_a: u64,
+    /// The total amount of token B under management by the vault
+    pub total_b: u64,
+    /// The mint address for the LP token
+    pub lp_mint: Pubkey,
+    /// The total supply of the LP mint for the vault
+    pub lp_supply: u64,
 }
 
-pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -> ClmmBalances {
+pub async fn load_token_a_token_b_aum(client: &RpcClient, clmm: &ClpVault) -> ClmmBalances {
     let mut total_a = 0_u64;
     let mut total_b = 0_u64;
     let mut lp_supply = 0_u64;
@@ -77,11 +75,11 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -
                 .expect("Token vault a deserialized properly");
             total_b += token_vault_b.amount;
         } else if index == 3 {
-          let mut data: &[u8] = &acct.as_ref().expect("LP Mint exists").data;
-          let lp_mint_acct: Mint = AccountDeserialize::try_deserialize(&mut data)
-              .expect("LP Mint deserialized properly");
+            let mut data: &[u8] = &acct.as_ref().expect("LP Mint exists").data;
+            let lp_mint_acct: Mint = AccountDeserialize::try_deserialize(&mut data)
+                .expect("LP Mint deserialized properly");
             lp_supply += lp_mint_acct.supply;
-        }else if index > 3 && index < 4 + MAX_POSITIONS {
+        } else if index > 3 && index < 4 + MAX_POSITIONS {
             let position_index = index - 4;
             let position_key = clmm.positions[position_index].position_key;
             if position_key == Pubkey::default() {
@@ -97,22 +95,22 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -
                     position_index
                 ));
             positions[position_index] = Some(position);
-        } 
+        }
     }
     // Calculate the tokenA and tokenB value of the positions
     let (positions_a, positions_b) = total_tokens_on_positions(&clp.unwrap(), clmm, &positions)
-            .expect("Position balances calculated");
+        .expect("Position balances calculated");
     println!("Position balances {:?}", (positions_a, positions_b));
 
     total_a += positions_a;
     total_b += positions_b;
     ClmmBalances {
-      token_a: clmm.token_mint_a,
-      token_b: clmm.token_mint_b,
-      total_a,
-      total_b,
-      lp_mint: clmm.lp_mint,
-      lp_supply,
+        token_a: clmm.token_mint_a,
+        token_b: clmm.token_mint_b,
+        total_a,
+        total_b,
+        lp_mint: clmm.lp_mint,
+        lp_supply,
     }
 }
 

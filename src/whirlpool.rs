@@ -97,58 +97,57 @@ pub struct PositionRewardInfo {
 }
 
 pub fn get_token_a_b_reward_indexes(
-  whirlpool: &Whirlpool,
-  token_a_mint: Pubkey,
-  token_b_mint: Pubkey,
+    whirlpool: &Whirlpool,
+    token_a_mint: Pubkey,
+    token_b_mint: Pubkey,
 ) -> (Vec<usize>, Vec<usize>) {
-  // Gather all the indexes for token a rewards and token b rewards. This is to avoid nested loops.
-  let mut token_a_reward_indexes: Vec<usize> = Vec::with_capacity(NUM_REWARDS);
-  let mut token_b_reward_indexes: Vec<usize> = Vec::with_capacity(NUM_REWARDS);
-  // Search the whirlpool rewards for tokenA or tokenB
-  for (reward_index, reward_info) in whirlpool.reward_infos.iter().enumerate() {
-      if reward_info.mint == token_a_mint {
-          token_a_reward_indexes.push(reward_index);
-      }
+    // Gather all the indexes for token a rewards and token b rewards. This is to avoid nested loops.
+    let mut token_a_reward_indexes: Vec<usize> = Vec::with_capacity(NUM_REWARDS);
+    let mut token_b_reward_indexes: Vec<usize> = Vec::with_capacity(NUM_REWARDS);
+    // Search the whirlpool rewards for tokenA or tokenB
+    for (reward_index, reward_info) in whirlpool.reward_infos.iter().enumerate() {
+        if reward_info.mint == token_a_mint {
+            token_a_reward_indexes.push(reward_index);
+        }
 
-      if reward_info.mint == token_b_mint {
-          token_b_reward_indexes.push(reward_index);
-      }
-  }
-  (token_a_reward_indexes, token_b_reward_indexes)
+        if reward_info.mint == token_b_mint {
+            token_b_reward_indexes.push(reward_index);
+        }
+    }
+    (token_a_reward_indexes, token_b_reward_indexes)
 }
 
-
 pub struct TokenBalances {
-  pub a: u64,
-  pub b: u64,
+    pub a: u64,
+    pub b: u64,
 }
 
 pub fn get_liquidity_from_position(position: &Position, whirlpool: &Whirlpool) -> TokenBalances {
-  let sqrt_price_lower = sqrt_price_from_tick_index(position.tick_lower_index);
-  let sqrt_price_upper = sqrt_price_from_tick_index(position.tick_upper_index);
-  // bound out-or-range price (sqrt_price_lower <= sqrt_price_current <= sqrt_price_upper)
-  let sqrt_price_current = std::cmp::min(
-      std::cmp::max(whirlpool.sqrt_price, sqrt_price_lower),
-      sqrt_price_upper,
-  );
+    let sqrt_price_lower = sqrt_price_from_tick_index(position.tick_lower_index);
+    let sqrt_price_upper = sqrt_price_from_tick_index(position.tick_upper_index);
+    // bound out-or-range price (sqrt_price_lower <= sqrt_price_current <= sqrt_price_upper)
+    let sqrt_price_current = std::cmp::min(
+        std::cmp::max(whirlpool.sqrt_price, sqrt_price_lower),
+        sqrt_price_upper,
+    );
 
-  let position_amount_a = get_amount_delta_a(
-      sqrt_price_current,
-      sqrt_price_upper,
-      position.liquidity,
-      false,
-  )
-  .unwrap();
-  let position_amount_b = get_amount_delta_b(
-      sqrt_price_lower,
-      sqrt_price_current,
-      position.liquidity,
-      false,
-  )
-  .unwrap();
+    let position_amount_a = get_amount_delta_a(
+        sqrt_price_current,
+        sqrt_price_upper,
+        position.liquidity,
+        false,
+    )
+    .unwrap();
+    let position_amount_b = get_amount_delta_b(
+        sqrt_price_lower,
+        sqrt_price_current,
+        position.liquidity,
+        false,
+    )
+    .unwrap();
 
-  TokenBalances {
-      a: position_amount_a,
-      b: position_amount_b,
-  }
+    TokenBalances {
+        a: position_amount_a,
+        b: position_amount_b,
+    }
 }
