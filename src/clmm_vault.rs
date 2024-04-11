@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token::{TokenAccount, Mint};
 use clmm_bindings::{ClpVault, MAX_POSITIONS};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::pubkey::Pubkey;
@@ -31,15 +31,19 @@ pub struct ClmmBalances {
   pub total_a: u64,
   /// The total amount of token B under management by the vault
   pub total_b: u64,
+  /// The total supply of the LP mint for the vault
+  pub lp_supply: u64,
 }
 
 pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -> ClmmBalances {
     let mut total_a = 0_u64;
     let mut total_b = 0_u64;
+    let mut lp_supply = 0_u64;
     let keys = [
         clmm.clp,
         clmm.token_vault_a,
         clmm.token_vault_b,
+        clmm.lp_mint,
         clmm.positions[0].position_key,
         clmm.positions[1].position_key,
         clmm.positions[2].position_key,
@@ -70,8 +74,13 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -
             let token_vault_b: TokenAccount = AccountDeserialize::try_deserialize(&mut data)
                 .expect("Token vault a deserialized properly");
             total_b += token_vault_b.amount;
-        } else if index > 2 && index < 3 + MAX_POSITIONS {
-            let position_index = index - 3;
+        } else if index == 3 {
+          let mut data: &[u8] = &acct.as_ref().expect("LP Mint exists").data;
+          let lp_mint_acct: Mint = AccountDeserialize::try_deserialize(&mut data)
+              .expect("LP Mint deserialized properly");
+            lp_supply += lp_mint_acct.supply;
+        }else if index > 3 && index < 4 + MAX_POSITIONS {
+            let position_index = index - 4;
             let position_key = clmm.positions[position_index].position_key;
             if position_key == Pubkey::default() {
                 continue;
@@ -86,9 +95,9 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -
                     position_index
                 ));
             positions[position_index] = Some(position);
-        }
+        } 
     }
-    // TODO: Calculate the tokenA and tokenB value of the positions
+    // Calculate the tokenA and tokenB value of the positions
     let (positions_a, positions_b) = total_tokens_on_positions(&clp.unwrap(), clmm, &positions)
             .expect("Position balances calculated");
     println!("Position balances {:?}", (positions_a, positions_b));
@@ -99,7 +108,8 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -
       token_a: clmm.token_mint_a,
       token_b: clmm.token_mint_b,
       total_a,
-      total_b
+      total_b,
+      lp_supply
     }
 }
 

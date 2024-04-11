@@ -20,6 +20,5 @@ async fn main() {
     println!("mintA: {} mintB: {}", clmm_vault.token_mint_a, clmm_vault.token_mint_b);
     let res = load_token_a_token_b_aum(client.clone(), &clmm_vault).await;
     println!("Vault balances: {:?}", res);
-    // TODO: Load the LP mint data
     // TODO: Load all LP token hodlers and their LP balances
 }
