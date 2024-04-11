@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, TokenAccount};
 use clmm_bindings::{ClpVault, MAX_POSITIONS};
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::pubkey::Pubkey;
+use solana_program::pubkey::Pubkey;
 
 use crate::whirlpool::{
     get_liquidity_from_position, get_token_a_b_reward_indexes, Position, Whirlpool,
