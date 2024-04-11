@@ -818,6 +818,8 @@ dependencies = [
 [[package]]
 name = "clmm-bindings"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bde625989f23125c358efed331b286aee3253610f0ed4bf17fa8990c055cc042"
 dependencies = [
  "anchor-lang",
 ]

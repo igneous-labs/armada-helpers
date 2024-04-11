@@ -31,6 +31,8 @@ pub struct ClmmBalances {
   pub total_a: u64,
   /// The total amount of token B under management by the vault
   pub total_b: u64,
+  /// The mint address for the LP token
+  pub lp_mint: Pubkey,
   /// The total supply of the LP mint for the vault
   pub lp_supply: u64,
 }
@@ -109,7 +111,8 @@ pub async fn load_token_a_token_b_aum(client: Arc<RpcClient>, clmm: &ClpVault) -
       token_b: clmm.token_mint_b,
       total_a,
       total_b,
-      lp_supply
+      lp_mint: clmm.lp_mint,
+      lp_supply,
     }
 }
 

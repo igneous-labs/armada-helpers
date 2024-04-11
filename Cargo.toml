@@ -2,12 +2,15 @@
 name = "armada-lp-value"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+exclude = ["main.rs"]
 
 [[bin]]
 name = "armada-lp-value"
 path = "src/main.rs"
+
+[lib]
+name = "armada_helpers"
+path = "src/lib.rs"
 
 [dependencies]
 anchor-lang = "^0.26"
@@ -17,5 +20,5 @@ solana-rpc-client-api = "^1.16"
 solana-sdk = "^1.16"
 tokio = {version = "1", features = ["full"] }
 
-clmm-bindings = { path = "../psylbc/programs/clmm-bindings" }
+clmm-bindings = "^0.1"
 whirlpool = { git = "https://github.com/orca-so/whirlpools", rev = "f54632f", features = ["no-entrypoint"] }
